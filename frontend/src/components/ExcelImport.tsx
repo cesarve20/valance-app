@@ -2,7 +2,8 @@ import { useRef, useState, useEffect } from 'react';
 import readXlsxFile from 'read-excel-file';
 import Papa from 'papaparse';
 import { Upload, FileSpreadsheet, Check, X, Loader2, CreditCard, Wallet, AlertTriangle, Sparkles } from 'lucide-react';
-import axios from 'axios';
+// 1. CAMBIO: Importamos nuestra instancia configurada de axios
+import api from '../api/axios'; 
 
 interface Category { id: number; name: string; }
 interface Wallet { id: number; name: string; type: string; bank: string | null; currency: string; }
@@ -26,7 +27,7 @@ const ExcelImport = ({ userId, categories, wallets, onSuccess }: Props) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewData, setPreviewData] = useState<ImportedRow[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false); // Nuevo estado para la IA
+  const [isAnalyzing, setIsAnalyzing] = useState(false); 
   
   const [selectedWalletId, setSelectedWalletId] = useState<string>("");
   const [isCreditCardMode, setIsCreditCardMode] = useState(false);
@@ -57,12 +58,11 @@ const ExcelImport = ({ userId, categories, wallets, onSuccess }: Props) => {
     return isNaN(num) ? 0 : num;
   };
 
-  // --- DICCIONARIO BÁSICO (Fallback) ---
   const findCategoryMatch = (description: string): number => {
     const desc = description.toLowerCase();
     const match = categories.find(cat => desc.includes(cat.name.toLowerCase()));
     if (match) return match.id;
-    return 0; // Si no encuentra, deja 0 (Varios)
+    return 0; 
   };
 
   const processRows = (rows: any[]) => {
@@ -131,7 +131,7 @@ const ExcelImport = ({ userId, categories, wallets, onSuccess }: Props) => {
     }
   };
 
-  // --- NUEVO: FUNCIÓN MAGICA DE IA ---
+  // --- FUNCIÓN MAGICA DE IA (CORREGIDA) ---
   const handleAICategorization = async () => {
     if (previewData.length === 0) return;
     setIsAnalyzing(true);
@@ -139,18 +139,17 @@ const ExcelImport = ({ userId, categories, wallets, onSuccess }: Props) => {
     try {
       const descriptions = previewData.map(row => row.Description);
       
-      // Llamada al Backend
-      const res = await axios.post('http://localhost:3000/api/ai/categorize', {
+      // 2. CAMBIO: Usamos api.post con ruta relativa
+      const res = await api.post('/ai/categorize', {
         descriptions,
         userId
       });
 
       const { categoryIds } = res.data;
 
-      // Actualizamos los datos con los IDs que devolvió la IA
       const newData = previewData.map((row, index) => ({
         ...row,
-        matchId: categoryIds[index] || row.matchId // Si la IA falla, mantenemos el anterior
+        matchId: categoryIds[index] || row.matchId 
       }));
 
       setPreviewData(newData);
@@ -178,7 +177,8 @@ const ExcelImport = ({ userId, categories, wallets, onSuccess }: Props) => {
         const amount = Math.abs(row.Amount);
         const categoryId = (row.matchId && row.matchId !== 0) ? row.matchId : fallbackId;
 
-        await axios.post('http://localhost:3000/api/users/transaction', {
+        // 3. CAMBIO: Usamos api.post con ruta relativa
+        await api.post('/users/transaction', {
           amount, description: row.Description, date: row.Date, type, categoryId, walletId: Number(selectedWalletId), userId
         });
         importedCount++;
@@ -202,6 +202,7 @@ const ExcelImport = ({ userId, categories, wallets, onSuccess }: Props) => {
     <div className="mb-6 animate-fade-in-down">
       {!previewData.length ? (
         <div className={`p-6 rounded-2xl shadow-sm border ${cardClass}`}>
+          {/* ... (Todo el UI sigue igual) ... */}
           <div className="flex items-center gap-2 mb-4">
             <FileSpreadsheet className="text-green-600" size={24} />
             <h3 className={`font-bold text-lg ${textClass}`}>Importar Movimientos</h3>
