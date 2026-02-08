@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+// 1. CAMBIO IMPORTANTE: Usamos 'api' en lugar de 'axios'
+import api from '../api/axios'; 
 import { X, Save, Calendar, DollarSign, FileText, Tag, Wallet } from 'lucide-react';
 
 interface Category { id: number; name: string; }
@@ -35,19 +36,18 @@ const TransactionModal = ({ isOpen, onClose, userId, wallets, categories, onSucc
         amount: String(transactionToEdit.amount),
         description: transactionToEdit.description || '',
         date: new Date(transactionToEdit.date).toISOString().split('T')[0],
-        type: transactionToEdit.type,
+        type: transactionToEdit.type as any, // Pequeño fix de tipo
         walletId: String(transactionToEdit.walletId),
         categoryId: String(transactionToEdit.categoryId)
       });
     } else {
-      // Resetear si es nuevo
       setFormData({
         amount: '',
         description: '',
         date: new Date().toISOString().split('T')[0],
         type: 'EXPENSE',
-        walletId: '', // Resetear wallet
-        categoryId: '' // Resetear categoria
+        walletId: '', 
+        categoryId: '' 
       });
     }
   }, [transactionToEdit, isOpen]);
@@ -63,18 +63,19 @@ const TransactionModal = ({ isOpen, onClose, userId, wallets, categories, onSucc
         userId,
         amount: Number(formData.amount),
         description: formData.description,
-        date: new Date(formData.date), // Convertir string a Date
+        date: new Date(formData.date),
         type: formData.type,
         walletId: Number(formData.walletId),
         categoryId: Number(formData.categoryId)
       };
 
+      // 2. CAMBIO IMPORTANTE: Rutas relativas con 'api'
       if (transactionToEdit) {
         // EDITAR
-        await axios.put(`http://localhost:3000/api/users/transaction/${transactionToEdit.id}`, payload);
+        await api.put(`/users/transaction/${transactionToEdit.id}`, payload);
       } else {
         // CREAR
-        await axios.post('http://localhost:3000/api/users/transaction', payload);
+        await api.post('/users/transaction', payload);
       }
 
       onSuccess();
@@ -87,11 +88,8 @@ const TransactionModal = ({ isOpen, onClose, userId, wallets, categories, onSucc
     }
   };
 
-  // Clases CSS compartidas para Inputs (MODO OSCURO READY)
-  const inputClass = "w-full pl-10 pr-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-blue-500 transition-all " +
-                     "bg-gray-50 border-gray-200 text-gray-900 " + 
-                     "dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400";
-
+  // Clases CSS (Igual que antes)
+  const inputClass = "w-full pl-10 pr-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-gray-50 border-gray-200 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400";
   const labelClass = "block text-xs font-bold uppercase mb-1 text-gray-500 dark:text-gray-400";
 
   return (
@@ -153,7 +151,7 @@ const TransactionModal = ({ isOpen, onClose, userId, wallets, categories, onSucc
               <Calendar className="absolute left-3 top-3.5 text-gray-400" size={18} />
               <input
                 type="date"
-                className={inputClass} // input[type="date"] ya hereda estilos
+                className={inputClass}
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 required
