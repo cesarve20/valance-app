@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Wallet" ADD COLUMN     "bank" TEXT,
+ADD COLUMN     "creditLimit" DECIMAL(65,30) DEFAULT 0,
+ADD COLUMN     "type" TEXT NOT NULL DEFAULT 'DEBIT';

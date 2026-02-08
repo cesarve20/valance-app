@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- MODELOS DE USUARIO Y FINANZAS PERSONALES ---
+
+model User {
+  id           Int           @id @default(autoincrement())
+  email        String        @unique
+  password     String
+  name         String?
+  browser      String?
+  createdAt    DateTime      @default(now())
+  
+  // Relaciones de Finanzas Personales
+  wallets      Wallet[]
+  categories   Category[]
+  transactions Transaction[]
+  budgets      Budget[]
+
+  // --- RELACIONES DE GRUPOS (SPLITWISE) ---
+  
+  // 1. Grupos que yo creé (soy el dueño)
+  groupsOwned  Group[]       @relation("Owner")
+
+  // 2. Grupos donde soy miembro (me invitaron o me agregué)
+  // ESTA LÍNEA ARREGLA EL ERROR: Usamos un nombre explícito "GroupMembership"
+  memberships  GroupMember[] @relation("GroupMembership")
+}
+
+model Wallet {
+  id          Int           @id @default(autoincrement())
+  name        String
+  balance     Decimal       @default(0)
+  currency    String        @default("ARS")
+  
+  type        String        @default("DEBIT") 
+  bank        String?       
+  creditLimit Decimal?      @default(0) 
+
+  userId      Int
+  user        User          @relation(fields: [userId], references: [id])
+  
+  transactions Transaction[]
+  createdAt    DateTime     @default(now())
+}
+
+model Category {
+  id           Int           @id @default(autoincrement())
+  name         String
+  type         String    
+  icon         String?   
+  
+  userId       Int
+  user         User          @relation(fields: [userId], references: [id])
+  
+  transactions Transaction[]
+  budgets      Budget[]
+}
+
+model Transaction {
+  id          Int      @id @default(autoincrement())
+  amount      Decimal
+  date        DateTime @default(now())
+  description String?
+  type        String   
+  
+  walletId    Int
+  wallet      Wallet   @relation(fields: [walletId], references: [id])
+  
+  categoryId  Int
+  category    Category @relation(fields: [categoryId], references: [id])
+  
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model Budget {
+  id         Int      @id @default(autoincrement())
+  amount     Decimal
+  
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+  
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  
+  createdAt  DateTime @default(now())
+}
+
+// --- MODELOS PARA GASTOS COMPARTIDOS (MODO SPLITWISE) ---
+
+// 1. EL GRUPO
+model Group {
+  id          Int      @id @default(autoincrement())
+  name        String
+  icon        String?  
+  currency    String   @default("ARS")
+  createdAt   DateTime @default(now())
+
+  // Dueño del grupo
+  ownerId     Int
+  owner       User     @relation("Owner", fields: [ownerId], references: [id])
+
+  members     GroupMember[]
+  expenses    GroupExpense[]
+}
+
+// 2. LOS MIEMBROS
+model GroupMember {
+  id          Int      @id @default(autoincrement())
+  name        String
+  
+  // VINCULACIÓN CON USUARIO REAL (Opcional)
+  userId      Int?   
+  // ESTA LÍNEA ARREGLA EL ERROR: Conecta con el mismo nombre "GroupMembership"
+  user        User?    @relation("GroupMembership", fields: [userId], references: [id])
+
+  groupId     Int
+  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  // Gastos
+  expensesPaid GroupExpense[] @relation("Payer")
+  splits       ExpenseSplit[]
+}
+
+// 3. EL GASTO
+model GroupExpense {
+  id          Int      @id @default(autoincrement())
+  description String
+  amount      Decimal  @db.Decimal(10, 2)
+  date        DateTime @default(now())
+
+  groupId     Int
+  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  paidById    Int
+  paidBy      GroupMember @relation("Payer", fields: [paidById], references: [id])
+
+  splits      ExpenseSplit[]
+}
+
+// 4. LA DIVISIÓN
+model ExpenseSplit {
+  id             Int          @id @default(autoincrement())
+  amount         Decimal      @db.Decimal(10, 2) 
+  
+  groupExpenseId Int
+  expense        GroupExpense @relation(fields: [groupExpenseId], references: [id], onDelete: Cascade)
+  
+  memberId       Int
+  member         GroupMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}

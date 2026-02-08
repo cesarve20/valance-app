@@ -1,0 +1,23 @@
+# --- Dependencias (¡NUNCA SUBIR ESTO!) ---
+node_modules/
+*/node_modules/
+
+# --- Build / Producción ---
+dist/
+build/
+*/dist/
+*/build/
+
+# --- Variables de Entorno (SECRETOS) ---
+.env
+.env.local
+*/.env
+
+# --- Archivos del Sistema Operativo ---
+.DS_Store
+Thumbs.db
+
+# --- Logs y Errores ---
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

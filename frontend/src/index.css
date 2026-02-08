@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --- DEFINICIÓN DE TEMAS --- */
+@layer base {
+  
+  /* TEMA CLARO (Default) */
+  :root {
+    --bg-main: #F3F4F6;       /* Gris muy suave */
+    --bg-card: #FFFFFF;       /* Blanco */
+    --text-main: #1F2937;     /* Gris oscuro casi negro */
+    --text-muted: #6B7280;    /* Gris medio */
+    
+    /* BRANDING (AZUL SIEMPRE) */
+    --primary: #2563EB;       
+    --primary-hover: #1D4ED8;
+  }
+
+  /* TEMA OSCURO */
+  [data-theme='dark'] {
+    --bg-main: #0F172A;       /* Azul noche muy oscuro (Más elegante que negro puro) */
+    --bg-card: #1E293B;       /* Azul grisáceo oscuro */
+    --text-main: #F8FAFC;     /* Blanco humo */
+    --text-muted: #94A3B8;    /* Gris azulado claro */
+    
+    /* BRANDING (AZUL SIEMPRE - Ligeramente más brillante para contraste oscuro) */
+    --primary: #3B82F6;       
+    --primary-hover: #60A5FA;
+  }
+
+  /* TEMA CREMA (Latte) */
+  [data-theme='cream'] {
+    --bg-main: #F5F0E1;       /* Beige suave */
+    --bg-card: #FFFCF2;       /* Blanco crema */
+    
+    /* Texto: Usamos gris oscuro en vez de café para mantener seriedad */
+    --text-main: #374151;     
+    --text-muted: #6B7280;    
+    
+    /* BRANDING (AZUL SIEMPRE - El mismo del modo claro) */
+    /* Aquí estaba el error antes, lo teníamos en Naranja */
+    --primary: #2563EB;       
+    --primary-hover: #1D4ED8;
+  }
+}
+
+/* Aplicamos las variables al body */
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
