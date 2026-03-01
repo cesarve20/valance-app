@@ -4,12 +4,14 @@ import api from '../api/axios';
 import { 
   LayoutDashboard, Wallet, PieChart, LogOut, Plus, 
   ArrowDownLeft, ArrowUpRight, Calendar, Trash2, Pencil, 
-  Menu, X, Sun, Moon, Coffee, Settings, Users, TrendingUp, TrendingDown 
+  Menu, X, Sun, Moon, Coffee, Settings, Users, TrendingUp, TrendingDown,
+  Sparkles, Bot 
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import TransactionModal from '../components/TransactionModal';
 import ExpenseChart from '../components/ExpenseChart';
 import BudgetChart from '../components/BudgetChart';
+import ReactMarkdown from 'react-markdown'; 
 
 // --- TIPOS ---
 interface Category { id: number; name: string; icon: string; }
@@ -35,6 +37,10 @@ const Dashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | undefined>(undefined);
 
+  // --- ESTADOS DE LA IA ---
+  const [aiAdvice, setAiAdvice] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
   // --- Fetch con filtros ---
   const fetchDashboardData = async (userId: number, month: number, year: number) => {
     try {
@@ -52,8 +58,29 @@ const Dashboard = () => {
     if (!storedUser) { navigate('/'); return; }
     const parsedUser = JSON.parse(storedUser);
     setUser(parsedUser);
+    
+    // Limpiamos el consejo de la IA si el usuario cambia de mes
+    setAiAdvice(null); 
+    
     fetchDashboardData(parsedUser.id, selectedMonth, selectedYear);
   }, [navigate, selectedMonth, selectedYear]);
+
+  // --- FUNCIÓN PARA LLAMAR A GEMINI ---
+  const handleGetAiAdvice = async () => {
+    if (!user) return;
+    setIsAiLoading(true);
+    try {
+      const response = await api.get(`/users/${user.id}/ai-advice`, {
+        params: { month: selectedMonth, year: selectedYear }
+      });
+      setAiAdvice(response.data.advice);
+    } catch (error) {
+      setAiAdvice("❌ Ups... Hubo un problema al contactar con tu Asesor Financiero. Inténtalo de nuevo más tarde.");
+      console.error("Error AI:", error);
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
   const handleLogout = () => { localStorage.removeItem('valance_user'); navigate('/'); };
 
@@ -109,11 +136,13 @@ const Dashboard = () => {
         `}>
         <div>
           <div className="p-6 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg flex-shrink-0">
-                <span className="text-white font-bold text-xl">V</span>
-              </div>
-              <h1 className="text-2xl font-bold tracking-tight text-tmain">Valance</h1>
+            {/* LOGO EN EL SIDEBAR */}
+            <div className="flex items-center">
+              <img 
+              src="/valance-logo.png" 
+              alt="Valance Logo" 
+              className="h-16 md:h-20 w-auto object-contain drop-shadow-sm" 
+            />
             </div>
             <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-tmuted hover:text-tmain">
               <X size={24} />
@@ -273,6 +302,71 @@ const Dashboard = () => {
             </div>
           </div>
 
+          {/* 🌟 MÓDULO DE INTELIGENCIA ARTIFICIAL 🌟 */}
+          <div className="relative bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 rounded-2xl p-1 shadow-lg overflow-hidden animate-fade-in">
+            <div className="bg-card rounded-xl p-5 md:p-8 h-full">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-purple-100 text-purple-600 rounded-xl shadow-sm">
+                    <Bot size={28} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-tmain">Asesor Financiero Valance AI</h3>
+                    <p className="text-sm text-tmuted">Análisis inteligente de tu mes basado en tus movimientos.</p>
+                  </div>
+                </div>
+                
+                {/* Botón Mágico */}
+                {!aiAdvice && !isAiLoading && (
+                  <button 
+                    onClick={handleGetAiAdvice}
+                    className="w-full md:w-auto bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-purple-500/30 transition-all flex items-center justify-center gap-2 transform hover:-translate-y-1"
+                  >
+                    <Sparkles size={18} /> Generar Análisis
+                  </button>
+                )}
+              </div>
+
+              {/* Animación de Carga */}
+              {isAiLoading && (
+                <div className="py-8 flex flex-col items-center justify-center text-purple-600 animate-pulse">
+                  <Bot size={48} className="mb-4 animate-bounce" />
+                  <p className="font-bold text-lg">Gemini está analizando tus finanzas...</p>
+                  <p className="text-sm text-tmuted">Buscando oportunidades de ahorro</p>
+                </div>
+              )}
+
+              {/* Resultado del Lector Markdown */}
+              {aiAdvice && !isAiLoading && (
+                <div className="mt-6 bg-main rounded-xl p-6 border border-gray-200/30 shadow-inner">
+                  
+                  {/* Envolvemos en un div para que Tailwind pueda aplicar los estilos a los hijos */}
+                  <div className="text-sm md:text-base text-tmain space-y-4 
+                    [&>h3]:font-bold [&>h3]:text-lg [&>h3]:text-blue-600 dark:[&>h3]:text-blue-400
+                    [&>p>strong]:text-purple-600 dark:[&>p>strong]:text-purple-400
+                    [&>ul]:list-disc [&>ul]:pl-6 [&>ul>li]:mb-2
+                    [&>ol]:list-decimal [&>ol]:pl-6 [&>ol>li]:mb-2"
+                  >
+                    <ReactMarkdown>
+                      {aiAdvice || ''}
+                    </ReactMarkdown>
+                  </div>
+                  
+                  {/* Botón para pedir de nuevo si hubo cambios */}
+                  <div className="mt-6 flex justify-end">
+                    <button 
+                      onClick={handleGetAiAdvice}
+                      className="text-sm text-tmuted hover:text-purple-600 font-medium flex items-center gap-1 transition-colors"
+                    >
+                      <Sparkles size={14} /> Refrescar consejo
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          {/* FIN SECCIÓN IA */}
+
           {/* GRID: GRÁFICO DONA + LISTA */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
             
@@ -336,7 +430,6 @@ const Dashboard = () => {
           {/* GRÁFICA DE PRESUPUESTOS */}
           {financeData.budgets.length > 0 && (
              <div className="mt-6">
-                {/* --- CORRECCIÓN AQUÍ: budgets={financeData.budgets} --- */}
                 <BudgetChart budgets={financeData.budgets} />
              </div>
           )}

@@ -7,14 +7,21 @@ const Landing = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 text-gray-800 font-sans">
       
-      {/* NAV */}
+{/* NAV */}
       <nav className="p-6 flex justify-between items-center max-w-7xl mx-auto">
-        <div className="flex items-center gap-2">
-           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg">V</div>
-           <span className="text-2xl font-bold tracking-tight text-blue-900">Valance</span>
+        
+        {/* CONTENEDOR DEL LOGO (Ajustado al cuadro rojo que dibujaste) */}
+        <div className="flex items-center">
+          <img 
+              src="/valance-logo.png" 
+              alt="Logo Valance" 
+              className="h-10 md:h-14 w-auto object-contain drop-shadow-sm transition-transform hover:scale-105 cursor-pointer" 
+          />
         </div>
-        <div className="flex gap-4">
-            <button onClick={() => navigate('/login')} className="px-5 py-2 text-gray-600 font-medium hover:text-blue-600 transition">Ingresar</button>
+
+        {/* BOTONES */}
+        <div className="flex items-center gap-4">
+            <button onClick={() => navigate('/login')} className="px-5 py-2 text-gray-600 font-medium hover:text-blue-600 transition hidden sm:block">Ingresar</button>
             <button onClick={() => navigate('/login')} className="px-5 py-2 bg-blue-600 text-white rounded-full font-bold shadow-lg hover:bg-blue-700 transition transform hover:scale-105">Registrarse</button>
         </div>
       </nav>

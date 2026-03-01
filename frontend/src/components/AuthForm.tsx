@@ -145,6 +145,8 @@ const AuthForm = () => {
         {/* --- FORMULARIO REGISTRO --- */}
         <div className="form-container sign-up-container">
           <form className="form-content px-8 h-full flex flex-col justify-center" onSubmit={handleRegisterSubmit}>
+            {/* LOGO EN REGISTRO */}
+            <img src="/valance-logo.png" alt="Valance" className="h-10 md:h-12 mb-4 object-contain mx-auto" />
             <h1 className="text-2xl font-bold mb-2">Crear Cuenta</h1>
             <span className="text-xs text-gray-400 mb-2">Usa tu email principal</span>
             
@@ -229,6 +231,8 @@ const AuthForm = () => {
         {/* --- FORMULARIO LOGIN --- */}
         <div className="form-container sign-in-container">
           <form className="form-content px-10" onSubmit={handleLoginSubmit}>
+            {/* LOGO EN LOGIN */}
+            <img src="/valance-logo.png" alt="Valance" className="h-10 md:h-12 mb-4 object-contain mx-auto" />
             <h1 className="text-3xl font-bold mb-4">Iniciar Sesión</h1>
             <span className="text-sm text-gray-400 mb-6">Ingresa a tu cuenta Valance</span>
             
@@ -248,8 +252,19 @@ const AuthForm = () => {
                 {showLoginPassword ? <EyeOffIcon /> : <EyeIcon />}
               </button>
             </div>
+
+            {/* --- BOTÓN OLVIDÉ MI CONTRASEÑA --- */}
+            <div className="flex justify-end w-full mt-1 mb-2">
+              <button 
+                type="button" 
+                onClick={() => navigate('/forgot-password')} 
+                className="text-xs font-medium text-blue-600 hover:text-blue-800 transition bg-transparent border-none p-0 cursor-pointer"
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
             
-            <button className="mt-6 bg-blue-600 text-white font-bold py-3 px-10 rounded-full hover:bg-blue-700 transition uppercase text-xs tracking-wider shadow-lg">
+            <button className="mt-4 bg-blue-600 text-white font-bold py-3 px-10 rounded-full hover:bg-blue-700 transition uppercase text-xs tracking-wider shadow-lg">
               Ingresar
             </button>
             

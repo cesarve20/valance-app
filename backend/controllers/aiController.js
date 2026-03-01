@@ -48,7 +48,7 @@ export const categorizeTransactions = async (req, res) => {
         Ejemplo: [12, 5, 8, 12]
       `;
 
-      // ✅ AQUÍ ESTÁ EL CAMBIO: Usamos el modelo que confirmamos que tienes disponible
+      // Usamos el modelo que confirmamos que tienes disponible
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
       
       const result = await model.generateContent(prompt);
@@ -113,3 +113,81 @@ function fallbackCategorization(description, categories) {
 
   return 0;
 }
+
+// ----------------------------------------------------------------------
+// NUEVA: Asesor Financiero IA (Gemini)
+// ----------------------------------------------------------------------
+export const getFinancialAdvice = async (req, res) => {
+  const { id } = req.params;
+  const { month, year } = req.query;
+
+  try {
+    const userId = Number(id);
+
+    // 1. Filtrar transacciones del mes
+    const dateFilter = {};
+    if (month !== undefined && year !== undefined) {
+      const startDate = new Date(Number(year), Number(month), 1);
+      const endDate = new Date(Number(year), Number(month) + 1, 0);
+      dateFilter.date = { gte: startDate, lte: endDate };
+    }
+
+    const transactions = await prisma.transaction.findMany({
+      where: { userId, ...dateFilter },
+      include: { category: true }
+    });
+
+    // 2. Calcular Ingresos y Gastos por Categoría
+    let income = 0;
+    let expense = 0;
+    const expenseMap = {};
+
+    transactions.forEach(t => {
+      const amount = Number(t.amount);
+      if (t.type === 'INCOME') {
+        income += amount;
+      } else {
+        expense += amount;
+        const catName = t.category?.name || "Otros";
+        if (!expenseMap[catName]) expenseMap[catName] = 0;
+        expenseMap[catName] += amount;
+      }
+    });
+
+    // Si no hay datos, no gastamos cuota de la API
+    if (income === 0 && expense === 0) {
+      return res.json({ advice: "Aún no tienes movimientos este mes. ¡Registra tus ingresos y gastos para que pueda darte consejos personalizados!" });
+    }
+
+    // 3. Preparar el Prompt Maestro para Gemini
+    const prompt = `
+      Actúa como un asesor financiero personal experto, empático y directo.
+      Analiza los siguientes datos financieros mensuales del usuario:
+      
+      - Ingresos totales del mes: $${income}
+      - Gastos totales del mes: $${expense}
+      - Balance neto: $${income - expense}
+      - Desglose de gastos por categoría: ${JSON.stringify(expenseMap)}
+
+      Por favor, devuélveme una respuesta en formato Markdown con la siguiente estructura exacta:
+      1. Un saludo motivador y un breve análisis de 2 líneas sobre cómo le fue este mes.
+      2. **El Semáforo:** Dime si su nivel de gasto es Saludable (Verde), Precaución (Amarillo) o Peligro (Rojo).
+      3. **Tus 3 Consejos:** Basado estrictamente en las categorías donde más gastó, dale 3 consejos prácticos y accionables para ahorrar dinero.
+      4. **Meta de Ahorro:** Sugiere un monto o porcentaje exacto para intentar ahorrar el próximo mes.
+    `;
+
+    // 4. Llamar a Gemini (Usamos la misma versión 2.0-flash para consistencia)
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }); 
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const advice = response.text();
+
+    // 5. Devolver el consejo al Frontend
+    res.json({ advice });
+
+  } catch (error) {
+    console.error("❌ ERROR EN ASESOR IA:", error);
+    res.status(500).json({ error: "Error al generar el consejo financiero" });
+  }
+};

@@ -8,6 +8,8 @@ import GroupDetail from './pages/GroupDetail';
 import Settings from './pages/Settings';
 import Transactions from './pages/Transactions';
 import Landing from './pages/Landing'; 
+import ForgotPassword from './pages/ForgotPassword'; // Ajusta la ruta si es necesario
+import ResetPassword from './pages/ResetPassword'
 
 const App = () => {
   return (
@@ -31,6 +33,9 @@ const App = () => {
         
         <Route path="/settings" element={<Settings />} />
         <Route path="/transactions" element={<Transactions />} />
+     
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:id/:token" element={<ResetPassword />} />
       </Routes>
     </BrowserRouter>
   );

@@ -17,9 +17,13 @@ import {
   updateBudget,
   createCategory,
   deleteCategory,
-  getTransactions // <--- IMPORTACIÓN NUEVA
+  getTransactions,
+  updateUserProfile,
+  forgotPassword,
+  resetPassword, // <--- IMPORTACIÓN NUEVA
 } from '../controllers/userController.js';
 import { googleLogin } from '../controllers/authController.js';
+import { getFinancialAdvice } from '../controllers/aiController.js';
 
 const router = express.Router();
 
@@ -52,5 +56,10 @@ router.put('/budget/:id', updateBudget);
 
 // HISTORIAL (NUEVA RUTA)
 router.get('/:id/transactions', getTransactions); // <--- NUEVA
+
+// PERFIL DE USUARIO
+router.put('/:id/profile', updateUserProfile); // <--- NUEVA RUTA PARA EDICIÓN
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password/:id/:token', resetPassword); // <--- NUEVA RUTA PARA RESETEO DE CONTRASEÑA
 
 export default router;

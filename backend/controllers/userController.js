@@ -2,6 +2,16 @@
 import prisma from '../db.js';
 import bcrypt from 'bcryptjs'; 
 import jwt from 'jsonwebtoken'; // <--- 1. IMPORTANTE: Agregamos esta librería
+import nodemailer from 'nodemailer';
+
+// --- CONFIGURACIÓN DEL CARTERO DE GMAIL ---
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 // 1. Obtener usuarios
 export const getUsers = async (req, res) => {
@@ -48,14 +58,10 @@ export const createUser = async (req, res) => {
       console.log(`✅ Billetera creada con moneda: ${currency || "ARS"}`);
 
       // C. Crear Categorías
-      const defaultCategories = [
-        { name: "Sueldo", type: "INCOME", icon: "DollarSign" },
-        { name: "Comida", type: "EXPENSE", icon: "Pizza" },
-        { name: "Transporte", type: "EXPENSE", icon: "Car" },
-        { name: "Servicios", type: "EXPENSE", icon: "Zap" },
-        { name: "Ocio", type: "EXPENSE", icon: "Smile" },
+     const defaultCategories = [
+        { name: "Sueldo/Ingresos", type: "INCOME", icon: "DollarSign" },
+        { name: "General", type: "EXPENSE", icon: "ShoppingCart" },
       ];
-
       await prisma.category.createMany({
         data: defaultCategories.map(cat => ({ ...cat, userId: user.id }))
       });
@@ -623,5 +629,123 @@ export const getTransactions = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al obtener transacciones' });
+  }
+};
+// 19. NUEVA: Actualizar Perfil de Usuario (Nombre, Email, Password)
+export const updateUserProfile = async (req, res) => {
+  const { id } = req.params;
+  const { name, email, password } = req.body;
+
+  try {
+    const userId = Number(id);
+
+    // 1. Verificamos que el usuario exista
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+
+    // 2. Preparamos los datos a actualizar
+    const updateData = {};
+    if (name) updateData.name = name;
+    
+    // Si cambia el correo, verificamos que no esté en uso por otro
+    if (email && email !== user.email) {
+      const emailExists = await prisma.user.findUnique({ where: { email } });
+      if (emailExists) return res.status(400).json({ error: "Este correo ya está en uso" });
+      updateData.email = email;
+    }
+
+    // 3. Si mandó una nueva contraseña, la encriptamos
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      updateData.password = await bcrypt.hash(password, salt);
+    }
+
+    // 4. Actualizamos en la base de datos
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData
+    });
+
+    // 5. Devolvemos el usuario sin la contraseña por seguridad
+    const { password: _, ...userWithoutPassword } = updatedUser;
+    res.json({ message: "Perfil actualizado correctamente", user: userWithoutPassword });
+
+  } catch (error) {
+    console.error("❌ ERROR AL ACTUALIZAR PERFIL:", error);
+    res.status(500).json({ error: 'Error interno al actualizar el perfil' });
+  }
+};
+// 20. NUEVA: Solicitar recuperación de contraseña (Forgot Password)
+export const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+
+    // El token mágico que se destruye si cambia la clave
+    const secret = process.env.JWT_SECRET + user.password;
+    const token = jwt.sign({ id: user.id, email: user.email }, secret, { expiresIn: '15m' });
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetLink = `${frontendUrl}/reset-password/${user.id}/${token}`;
+
+    // Disparamos el correo con Nodemailer
+    const mailOptions = {
+      from: `"Valance App" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: 'Recuperación de contraseña - Valance',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 10px;">
+          <h2 style="color: #2563eb; text-align: center;">Recuperación de Contraseña</h2>
+          <p>Hola ${user.name},</p>
+          <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta en Valance.</p>
+          <p>Haz clic en el siguiente botón para crear una nueva contraseña. <strong>Este enlace expira en 15 minutos.</strong></p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetLink}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Restablecer mi Contraseña</a>
+          </div>
+          <p style="color: #6b7280; font-size: 14px;">Si no solicitaste este cambio, puedes ignorar este correo de forma segura.</p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.json({ message: "Correo de recuperación enviado" });
+
+  } catch (error) {
+    console.error("❌ ERROR EN FORGOT PASSWORD:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+};
+
+// 21. NUEVA: Restablecer la contraseña (Reset Password)
+export const resetPassword = async (req, res) => {
+  const { id, token } = req.params;
+  const { password } = req.body;
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: Number(id) } });
+    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+
+    const secret = process.env.JWT_SECRET + user.password;
+    
+    try {
+      jwt.verify(token, secret);
+    } catch (error) {
+      return res.status(400).json({ error: "El enlace es inválido o expiró" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    await prisma.user.update({
+      where: { id: Number(id) },
+      data: { password: hashedPassword }
+    });
+
+    res.json({ message: "Contraseña actualizada correctamente" });
+
+  } catch (error) {
+    console.error("❌ ERROR AL RESTABLECER:", error);
+    res.status(500).json({ error: "Error interno al restablecer la contraseña" });
   }
 };
