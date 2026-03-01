@@ -26,7 +26,7 @@ import { googleLogin } from '../controllers/authController.js';
 import { getFinancialAdvice } from '../controllers/aiController.js';
 
 const router = express.Router();
-
+router.get('/:id/ai-advice', getFinancialAdvice);
 router.get('/', getUsers);
 router.post('/', createUser);
 router.post('/login', loginUser);
